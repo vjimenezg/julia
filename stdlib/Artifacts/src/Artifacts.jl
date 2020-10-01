@@ -524,7 +524,7 @@ function jointail(dir, tail)
     end
 end
 
-function _artifact_str(__module__, artifacts_toml, name, path_tail, artifact_dict, hash, platform)
+function _artifact_str(__module__, artifacts_toml, name, path_tail, artifact_dict, hash, platform, @nospecialize(ensure_artifact_installed))
     if haskey(Base.module_keys, __module__)
         # Process overrides for this UUID, if we know what it is
         process_overrides(artifact_dict, Base.module_keys[__module__].uuid)
@@ -538,10 +538,16 @@ function _artifact_str(__module__, artifacts_toml, name, path_tail, artifact_dic
         end
     end
 
-    # If not, we need to download it.  We look up the Pkg module through `Base.loaded_modules()`
-    # then invoke `ensure_artifact_installed()`:
-    Pkg = first(filter(p-> p[1].name == "Pkg", Base.loaded_modules))[2]
-    return jointail(Pkg.Artifacts.ensure_artifact_installed(string(name), artifacts_toml; platform), path_tail)
+    # If not, try informing the user what went wrong:
+    if ensure_artifact_installed === nothing
+        meta = artifact_meta(name, artifact_dict, artifacts_toml; platform)
+        if meta !== nothing && get(meta, "lazy", false)
+            error("Artifact $(repr(name)) is a lazy artifact; package developers must provide `ensure_artifact_installed` (from `Pkg.Artifacts`) before using lazy artifacts.")
+        else
+            error("Artifact $(repr(name)) was not installed correctly. Try `using Pkg; Pkg.instantiate()` to re-install all missing resources.")
+        end
+    end
+    return jointail(ensure_artifact_installed(string(name), artifacts_toml; platform), path_tail)
 end
 
 """
@@ -649,14 +655,17 @@ macro artifact_str(name, platform=nothing)
     # Invalidate calling .ji file if Artifacts.toml file changes
     Base.include_dependency(artifacts_toml)
 
+    # Check if the user has provided `ensure_artifact_installed` (e.g. from `Pkg.Artifacts`) and thus supports lazy artifacts
+    ensure_artifact_installed = isdefined(__module__, :ensure_artifact_installed) ? GlobalRef(__module__, :ensure_artifact_installed) : nothing
+
     # If `name` is a constant, (and we're using the default `Platform`) we can actually load
     # and parse the `Artifacts.toml` file now, saving the work from runtime.
     if isa(name, AbstractString) && platform === nothing
         # To support slash-indexing, we need to split the artifact name from the path tail:
         platform = HostPlatform()
-        local artifact_name, artifact_path_tail, hash = artifact_slash_lookup(name, artifact_dict, artifacts_toml, platform)
+        artifact_name, artifact_path_tail, hash = artifact_slash_lookup(name, artifact_dict, artifacts_toml, platform)
         return quote
-            Base.invokelatest(_artifact_str, $(__module__), $(artifacts_toml), $(artifact_name), $(artifact_path_tail), $(artifact_dict), $(hash), $(platform))
+            Base.invokelatest(_artifact_str, $(__module__), $(artifacts_toml), $(artifact_name), $(artifact_path_tail), $(artifact_dict), $(hash), $(platform), $(ensure_artifact_installed))
         end
     else
         if platform === nothing
@@ -665,7 +674,7 @@ macro artifact_str(name, platform=nothing)
         return quote
             local platform = $(esc(platform))
             local artifact_name, artifact_path_tail, hash = artifact_slash_lookup($(esc(name)), $(artifact_dict), $(artifacts_toml), platform)
-            Base.invokelatest(_artifact_str, $(__module__), $(artifacts_toml), artifact_name, artifact_path_tail, $(artifact_dict), hash, platform)
+            Base.invokelatest(_artifact_str, $(__module__), $(artifacts_toml), artifact_name, artifact_path_tail, $(artifact_dict), hash, platform, $(ensure_artifact_installed))
         end
     end
 end
