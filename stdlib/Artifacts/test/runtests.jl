@@ -3,6 +3,8 @@
 using Artifacts, Test, Base.BinaryPlatforms
 using Artifacts: with_artifacts_directory, pack_platform!, unpack_platform
 
+run(`$(Base.julia_cmd()) $(joinpath(@__DIR__, "refresh_artifacts.jl"))`)
+
 @testset "Artifact Paths" begin
     mktempdir() do tempdir
         with_artifacts_directory(tempdir) do
@@ -78,44 +80,42 @@ end
 end
 
 @testset "Artifact Slash-indexing" begin
-    mktempdir() do tempdir
-        with_artifacts_directory(tempdir) do
-            exeext = Sys.iswindows() ? ".exe" : ""
+    tempdir = joinpath(@__DIR__, "artifacts")
+    with_artifacts_directory(tempdir) do
+        exeext = Sys.iswindows() ? ".exe" : ""
 
-            # simple lookup, gives us the directory for `c_simple` for the current architecture
-            c_simple_dir = artifact"c_simple"
-            @test isdir(c_simple_dir)
-            c_simple_exe_path = joinpath(c_simple_dir, "bin", "c_simple$(exeext)")
-            @test isfile(c_simple_exe_path)
+        # simple lookup, gives us the directory for `c_simple` for the current architecture
+        c_simple_dir = artifact"c_simple"
+        @test isdir(c_simple_dir)
+        c_simple_exe_path = joinpath(c_simple_dir, "bin", "c_simple$(exeext)")
+        @test isfile(c_simple_exe_path)
 
-            # Simple slash-indexed lookup
-            c_simple_bin_path = artifact"c_simple/bin"
-            @test isdir(c_simple_bin_path)
-            # Test that forward and backward slash are equivalent
-            @test artifact"c_simple\\bin" == artifact"c_simple/bin"
+        # Simple slash-indexed lookup
+        c_simple_bin_path = artifact"c_simple/bin"
+        @test isdir(c_simple_bin_path)
+        # Test that forward and backward slash are equivalent
+        @test artifact"c_simple\\bin" == artifact"c_simple/bin"
 
-            # Dynamically-computed lookup; not done at compile-time
-            generate_artifact_name() = "c_simple"
-            c_simple_dir = @artifact_str(generate_artifact_name())
-            @test isdir(c_simple_dir)
-            c_simple_exe_path = joinpath(c_simple_dir, "bin", "c_simple$(exeext)")
-            @test isfile(c_simple_exe_path)
+        # Dynamically-computed lookup; not done at compile-time
+        generate_artifact_name() = "c_simple"
+        c_simple_dir = @artifact_str(generate_artifact_name())
+        @test isdir(c_simple_dir)
+        c_simple_exe_path = joinpath(c_simple_dir, "bin", "c_simple$(exeext)")
+        @test isfile(c_simple_exe_path)
 
-            # Dynamically-computed slash-indexing:
-            generate_bin_path(pathsep) = "c_simple$(pathsep)bin$(pathsep)c_simple$(exeext)"
-            @test isfile(@artifact_str(generate_bin_path("/")))
-            @test isfile(@artifact_str(generate_bin_path("\\")))
-        end
+        # Dynamically-computed slash-indexing:
+        generate_bin_path(pathsep) = "c_simple$(pathsep)bin$(pathsep)c_simple$(exeext)"
+        @test isfile(@artifact_str(generate_bin_path("/")))
+        @test isfile(@artifact_str(generate_bin_path("\\")))
     end
 end
 
 @testset "@artifact_str Platform passing" begin
-    mktempdir() do tempdir
-        with_artifacts_directory(tempdir) do
-            win64 = Platform("x86_64", "windows")
-            mac64 = Platform("x86_64", "macos")
-            @test basename(@artifact_str("c_simple", win64)) == "444cecb70ff39e8961dd33e230e151775d959f37"
-            @test basename(@artifact_str("c_simple", mac64)) == "7ba74e239348ea6c060f994c083260be3abe3095"
-        end
+    tempdir = joinpath(@__DIR__, "artifacts")
+    with_artifacts_directory(tempdir) do
+        win64 = Platform("x86_64", "windows")
+        mac64 = Platform("x86_64", "macos")
+        @test basename(@artifact_str("c_simple", win64)) == "444cecb70ff39e8961dd33e230e151775d959f37"
+        @test basename(@artifact_str("c_simple", mac64)) == "7ba74e239348ea6c060f994c083260be3abe3095"
     end
 end

@@ -494,10 +494,7 @@ function _artifact_str(__module__, artifacts_toml, name, path_tail, artifact_dic
         end
     end
 
-    # If not, we need to download it.  We look up the Pkg module through `Base.loaded_modules()`
-    # then invoke `ensure_artifact_installed()`:
-    Pkg = first(filter(p-> p[1].name == "Pkg", Base.loaded_modules))[2]
-    return jointail(Pkg.Artifacts.ensure_artifact_installed(string(name), artifacts_toml; platform), path_tail)
+    error("Artifact $(repr(name)) is missing. Try `using Pkg; Pkg.build(\"$__module__\"); Pkg.Artifacts.ensure_all_artifacts_installed($(repr(artifacts_toml)))`?")
 end
 
 """
