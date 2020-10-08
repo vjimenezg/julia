@@ -515,6 +515,7 @@ $(eval $(call LLVM_PATCH,llvm-D88630-clang-cmake))
 endif
 $(eval $(call LLVM_PATCH,llvm-11-D85313-debuginfo-empty-arange)) # remove for LLVM 12
 $(eval $(call LLVM_PATCH,llvm-11-rtdyld-empty-symbol)) # FIXME(vchuravy): This should not be necessary
+$(eval $(call LLVM_PATCH,llvm-rtdyld-empty-symbol2)) # FIXME(vchuravy): This should not be necessary
 endif # LLVM_VER 11.0
 
 
