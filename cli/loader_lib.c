@@ -1,25 +1,22 @@
+// This file is a part of Julia. License is MIT: https://julialang.org/license
+//
+// This file defines an RPATH-style relative path loader for all platforms
 #include "loader.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/* Bring in definitions of symbols exported from libjulia. */
+#include "jl_exports.h"
+
 /* Bring in helper functions for windows without libgcc. */
 #ifdef _OS_WINDOWS_
 #include "loader_win_utils.c"
 #endif
 
-/*
- * DEP_LIBS is our list of dependent libraries that must be loaded before `libjulia`.
- * Note that order matters, as each entry will be opened in-order.  We define here a
- * dummy value just so this file compiles on its own, and also so that developers can
- * see what this value should look like.  Note that the last entry must always be
- * `libjulia`, and that all paths should be relative to this loader `.exe` path.
- */
-#if !defined(DEP_LIBS)
-#define DEP_LIBS "../lib/example.so:../lib/libjulia.so"
-#endif
-static char dep_libs[256] = DEP_LIBS;
+// Save DEP_LIBS to a variable that is explicitly sized for expansion
+static char dep_libs[512] = DEP_LIBS;
 
 void print_stderr(const char * msg)
 {
@@ -33,8 +30,7 @@ void print_stderr3(const char * msg1, const char * msg2, const char * msg3)
     print_stderr(msg3);
 }
 
-
-/* Absolute path to the path of the current executable, gets filled in by `get_exe_path()` */
+/* Wrapper around dlopen(), with extra relative pathing thrown in*/
 static void * load_library(const char * rel_path, const char * src_dir) {
     char path[2*PATH_MAX + 1] = {0};
     strncat(path, src_dir, sizeof(path) - 1);
@@ -75,65 +71,64 @@ static void * load_library(const char * rel_path, const char * src_dir) {
     return handle;
 }
 
-char exe_dir[PATH_MAX];
-const char * get_exe_dir()
+static void * lookup_symbol(const void * lib_handle, const char * symbol_name) {
+#ifdef _OS_WINDOWS_
+    return GetProcAddress((HMODULE) lib_handle, symbol_name);
+#else
+    return dlsym((void *)lib_handle, symbol_name);
+#endif
+}
+
+char lib_dir[PATH_MAX];
+const char * get_libdir()
 {
 #if defined(_OS_WINDOWS_)
-    // On Windows, we use GetModuleFileName()
-    wchar_t julia_path[PATH_MAX];
-    if (!GetModuleFileName(NULL, julia_path, PATH_MAX)) {
+    // On Windows, we use GetModuleFileNameW
+    wchar_t libjulia_path[PATH_MAX];
+    HMODULE libjulia_internal = NULL;
+
+    // Get a handle to libjulia internal
+    if (!utf8_to_wchar(LIBJULIA_NAME, libjulia_path, PATH_MAX)) {
+        print_stderr3("ERROR: Unable to convert path ", LIBJULIA_NAME, " to wide string!\n");
+        exit(1);
+    }
+    libjulia_internal = LoadLibraryW(libjulia_path);
+    if (libjulia_internal == NULL) {
+        print_stderr3("ERROR: Unable to load ", LIBJULIA_NAME, "!\n");
+        exit(1);
+    }
+    if (!GetModuleFileName(libjulia_internal, libjulia_path, PATH_MAX)) {
         print_stderr("ERROR: GetModuleFileName() failed\n");
         exit(1);
     }
-    if (!wchar_to_utf8(julia_path, exe_dir, PATH_MAX)) {
+    if (!wchar_to_utf8(libjulia_path, lib_dir, PATH_MAX)) {
         print_stderr("ERROR: Unable to convert julia path to UTF-8\n");
         exit(1);
     }
-#elif defined(_OS_DARWIN_)
-    // On MacOS, we use _NSGetExecutablePath(), followed by realpath()
-    char nonreal_exe_path[PATH_MAX + 1];
-    uint32_t exe_path_len = PATH_MAX;
-    int ret = _NSGetExecutablePath(nonreal_exe_path, &exe_path_len);
-    if (ret != 0) {
-        print_stderr("ERROR: _NSGetExecutablePath() failed\n");
+#else
+    // On all other platforms, use dladdr()
+    Dl_info info;
+    if (!dladdr(&get_libdir, &info)) {
+        print_stderr("ERROR: Unable to dladdr(&get_libdir)!\n");
+        print_stderr3("Message:", dlerror(), "\n");
         exit(1);
     }
-
-    if (realpath(nonreal_exe_path, exe_dir) == NULL) {
-        print_stderr("ERROR: realpath() failed\n");
-        exit(1);
-    }
-#elif defined(_OS_LINUX_)
-    // On Linux, we read from /proc/self/exe
-    int num_bytes = readlink("/proc/self/exe", exe_dir, PATH_MAX);
-    if (num_bytes == -1) {
-        print_stderr("ERROR: readlink(/proc/self/exe) failed\n");
-        exit(1);
-    }
-    exe_dir[num_bytes] = '\0';
-#elif defined(_OS_FREEBSD_)
-    // On FreeBSD, we use the KERN_PROC_PATHNAME sysctl:
-    int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1};
-    unsigned long exe_dir_len = PATH_MAX - 1;
-    int ret = sysctl(mib, 4, &exe_dir, &exe_dir_len, NULL, 0);
-    if (ret) {
-        print_stderr("ERROR: sysctl(KERN_PROC_PATHNAME) failed\n");
-        exit(1);
-    }
-    exe_dir[exe_dir_len] = '\0';
+    strcpy(lib_dir, info.dli_fname);
 #endif
     // Finally, convert to dirname
-    const char * new_dir = dirname(exe_dir);
-    if (new_dir != exe_dir) {
-        // On some plateforms, dirname() mutates.  On others, it does not.
-        memcpy(exe_dir, new_dir, strlen(new_dir)+1);
+    const char * new_dir = dirname(lib_dir);
+    if (new_dir != lib_dir) {
+        // On some platforms, dirname() mutates.  On others, it does not.
+        memcpy(lib_dir, new_dir, strlen(new_dir)+1);
     }
-    return exe_dir;
+    return lib_dir;
 }
 
-// Load libjulia and run the REPL with the given arguments (in UTF-8 format)
-int load_repl(const char * exe_dir, int argc, char * argv[])
-{
+
+void * load_libjulia_internal() {
+    // Introspect to find our own path
+    const char * lib_dir = get_libdir();
+
     // Pre-load libraries that libjulia needs.
     int deps_len = strlen(dep_libs);
     char * curr_dep = &dep_libs[0];
@@ -145,23 +140,34 @@ int load_repl(const char * exe_dir, int argc, char * argv[])
 
         // Chop the string at the colon, load this library.
         *colon = '\0';
-        load_library(curr_dep, exe_dir);
+        load_library(curr_dep, lib_dir);
 
         // Skip ahead to next dependency
         curr_dep = colon + 1;
     }
 
-    // Last dependency is `libjulia`, so load that and we're done with `dep_libs`!
-    void * libjulia = load_library(curr_dep, exe_dir);
+    // Last dependency is `libjulia-internal`, so load that and we're done with `dep_libs`!
+    void * libjulia_internal = load_library(curr_dep, lib_dir);
 
+    // Once we have libjulia-internal loaded, re-export its symbols:
+    for (unsigned int symbol_idx=0; jl_exported_func_names[symbol_idx] != NULL; ++symbol_idx) {
+        (*jl_exported_func_addrs[symbol_idx]) = lookup_symbol(libjulia_internal, jl_exported_func_names[symbol_idx]);
+    }
+
+    return libjulia_internal;
+}
+
+// Load libjulia and run the REPL with the given arguments (in UTF-8 format)
+JL_DLLEXPORT int load_repl(int argc, char * argv[]) {
+    void * libjulia_internal = load_libjulia_internal();
     // Next, if we're on Linux/FreeBSD, set up fast TLS.
 #if !defined(_OS_WINDOWS_) && !defined(_OS_DARWIN_)
-    void (*jl_set_ptls_states_getter)(void *) = dlsym(libjulia, "jl_set_ptls_states_getter");
+    void (*jl_set_ptls_states_getter)(void *) = lookup_symbol(libjulia_internal, "jl_set_ptls_states_getter");
     if (jl_set_ptls_states_getter == NULL) {
-        print_stderr("ERROR: Cannot find jl_set_ptls_states_getter() function within libjulia!\n");
+        print_stderr("ERROR: Cannot find jl_set_ptls_states_getter() function within libjulia-internal!\n");
         exit(1);
     }
-    void * (*fptr)(void) = dlsym(NULL, "jl_get_ptls_states_static");
+    void * (*fptr)(void) = lookup_symbol(NULL, "jl_get_ptls_states_static");
     if (fptr == NULL) {
         print_stderr("ERROR: Cannot find jl_get_ptls_states_static(), must define this symbol within calling executable!\n");
         exit(1);
@@ -170,14 +176,9 @@ int load_repl(const char * exe_dir, int argc, char * argv[])
 #endif
 
     // Load the repl entrypoint symbol and jump into it!
-    int (*entrypoint)(int, char **) = NULL;
-    #ifdef _OS_WINDOWS_
-        entrypoint = (int (*)(int, char **))GetProcAddress((HMODULE) libjulia, "repl_entrypoint");
-    #else
-        entrypoint = (int (*)(int, char **))dlsym(libjulia, "repl_entrypoint");
-    #endif
+    int (*entrypoint)(int, char **) = (int (*)(int, char **))lookup_symbol(libjulia_internal, "repl_entrypoint");
     if (entrypoint == NULL) {
-        print_stderr("ERROR: Unable to find `repl_entrypoint()` within libjulia!\n");
+        print_stderr("ERROR: Unable to find `repl_entrypoint()` within libjulia-internal!\n");
         exit(1);
     }
     return entrypoint(argc, (char **)argv);
