@@ -61,7 +61,11 @@
 # endif
 #define JL_HIDDEN
 #else
-#define JL_DLLEXPORT __attribute__ ((visibility("default")))
+# ifdef LIBRARY_EXPORTS
+#  define JL_DLLEXPORT __attribute__ ((visibility("protected")))
+# else
+#  define JL_DLLEXPORT __attribute__ ((visibility("default")))
+# endif
 #define JL_HIDDEN    __attribute__ ((visibility("hidden")))
 #endif
 #ifdef JL_DEBUG_BUILD
