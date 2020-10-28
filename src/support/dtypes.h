@@ -72,7 +72,7 @@
 #define JL_DLLIMPORT   __declspec(dllimport)
 #else
 #define STDCALL
-# ifdef LIBRARY_EXPORTS
+# if defined(LIBRARY_EXPORTS) && defined(_OS_LINUX_)
 #  define JL_DLLEXPORT __attribute__ ((visibility("protected")))
 # else
 #  define JL_DLLEXPORT __attribute__ ((visibility("default")))
