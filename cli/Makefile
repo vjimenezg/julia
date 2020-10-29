@@ -44,6 +44,9 @@ $(BUILDDIR)/%.o : $(SRCDIR)/%.c $(HEADERS)
 $(BUILDDIR)/%.dbg.obj : $(SRCDIR)/%.c $(HEADERS)
 	@$(call PRINT_CC, $(CC) $(DEBUGFLAGS) $(LOADER_CFLAGS) -c $< -o $@)
 
+$(build_bindir) $(build_shlibdir):
+	@mkdir -p $@
+
 ifeq ($(OS),WINNT)
 ifneq ($(USEMSVC), 1)
 $(BUILDDIR)/julia_res.o: $(JULIAHOME)/contrib/windows/julia.rc $(JULIAHOME)/VERSION
@@ -82,25 +85,25 @@ julia-debug: $(build_bindir)/julia-debug$(EXE)
 libjulia-release: $(build_shlibdir)/libjulia.$(JL_MAJOR_MINOR_SHLIB_EXT)
 libjulia-debug: $(build_shlibdir)/libjulia-debug.$(JL_MAJOR_MINOR_SHLIB_EXT)
 
-$(build_shlibdir)/libjulia.$(JL_MAJOR_MINOR_SHLIB_EXT): $(LIB_OBJS)
-	@$(call PRINT_LINK, $(CC) $(LOADER_CFLAGS) -DLIBRARY_EXPORTS -shared $(SHIPFLAGS) $(LIB_OBJS) -o $@ $(LOADER_LDFLAGS) $(RPATH_LIB)) $(call SONAME_FLAGS,$@)
+$(build_shlibdir)/libjulia.$(JL_MAJOR_MINOR_SHLIB_EXT): $(LIB_OBJS) | $(build_shlibdir)
+	@$(call PRINT_LINK, $(CC) $(LOADER_CFLAGS) -DLIBRARY_EXPORTS -shared $(SHIPFLAGS) $(LIB_OBJS) -o $@ $(LOADER_LDFLAGS) $(RPATH_LIB)) $(call SONAME_FLAGS,$(notdir $@))
 ifneq ($(OS), WINNT)
 	@ln -sf $(notdir $@) $(build_shlibdir)/libjulia.$(JL_MAJOR_SHLIB_EXT)
 	@ln -sf $(notdir $@) $(build_shlibdir)/libjulia.$(SHLIB_EXT)
 endif
 
 
-$(build_shlibdir)/libjulia-debug.$(JL_MAJOR_MINOR_SHLIB_EXT): $(LIB_DOBJS)
-	@$(call PRINT_LINK, $(CC) $(LOADER_CFLAGS) -DLIBRARY_EXPORTS -shared $(DEBUGFLAGS) $(LIB_DOBJS) -o $@ $(LOADER_LDFLAGS) $(RPATH_LIB)) $(call SONAME_FLAGS,$@)
+$(build_shlibdir)/libjulia-debug.$(JL_MAJOR_MINOR_SHLIB_EXT): $(LIB_DOBJS) | $(build_shlibdir)
+	@$(call PRINT_LINK, $(CC) $(LOADER_CFLAGS) -DLIBRARY_EXPORTS -shared $(DEBUGFLAGS) $(LIB_DOBJS) -o $@ $(LOADER_LDFLAGS) $(RPATH_LIB)) $(call SONAME_FLAGS,$(notdir $@))
 ifneq ($(OS), WINNT)
 	@ln -sf $(notdir $@) $(build_shlibdir)/libjulia-debug.$(JL_MAJOR_SHLIB_EXT)
 	@ln -sf $(notdir $@) $(build_shlibdir)/libjulia-debug.$(SHLIB_EXT)
 endif
 
-$(build_bindir)/julia$(EXE): $(EXE_OBJS) $(build_shlibdir)/libjulia.$(JL_MAJOR_MINOR_SHLIB_EXT)
+$(build_bindir)/julia$(EXE): $(EXE_OBJS) $(build_shlibdir)/libjulia.$(JL_MAJOR_MINOR_SHLIB_EXT) | $(build_bindir)
 	@$(call PRINT_LINK, $(CC) $(LOADER_CFLAGS) $(SHIPFLAGS) $(EXE_OBJS) -o $@ $(LOADER_LDFLAGS) $(RPATH) -ljulia)
 
-$(build_bindir)/julia-debug$(EXE): $(EXE_DOBJS) $(build_shlibdir)/libjulia-debug.$(JL_MAJOR_MINOR_SHLIB_EXT)
+$(build_bindir)/julia-debug$(EXE): $(EXE_DOBJS) $(build_shlibdir)/libjulia-debug.$(JL_MAJOR_MINOR_SHLIB_EXT) | $(build_bindir)
 	@$(call PRINT_LINK, $(CC) $(LOADER_CFLAGS) $(DEBUGFLAGS) $(EXE_DOBJS) -o $@ $(LOADER_LDFLAGS) $(RPATH) -ljulia-debug)
 
 clean: | $(CLEAN_TARGETS)
