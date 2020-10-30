@@ -13,13 +13,13 @@
 #elif defined(_CPU_X86_)
 #define JL_JUMPTO(x)   __asm__("jmpl *%0" : : "a"(x) :)
 #elif defined(_CPU_AARCH64_)
-#define JL_JUMPTO(x)   __asm__("br *%0" : : (x) :)
+#define JL_JUMPTO(x)   __asm__("br *%0" : : x :)
 #elif defined(_CPU_ARM_)
-#define JL_JUMPTO(x)   __asm__("br *%0" : : (x) :)
+#define JL_JUMPTO(x)   __asm__("br *%0" : : x :)
 #elif defined(_ARCH_PPC_)
-#define JL_JUMPTO(x)   __asm__("ljmp *%0" : : (x) :)
+#define JL_JUMPTO(x)   __asm__("ljmp *%0" : : x :)
 #elif defined(__wasm__)
-#define JL_JUMPTO(x)   __asm__("longjmp *%0" : : (x) :)
+#define JL_JUMPTO(x)   __asm__("longjmp *%0" : : x :)
 #else
 #warning "Symbol re-export trampoline support must be defined for this CPU to enable C linking against libjulia"
 #undef JL_EXPORTED_DATA
