@@ -187,6 +187,7 @@ JL_DLLEXPORT int jl_load_repl(int argc, char * argv[]) {
 // Empty DLL main entrypoint to silence warning
 #ifdef _OS_WINDOWS_
 int __stdcall DllMainCRTStartup(void* instance, unsigned reason, void* reserved) {
+    return 1;
 }
 #endif
 
