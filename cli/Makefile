@@ -90,8 +90,14 @@ libjulia-release: $(build_shlibdir)/libjulia.$(JL_MAJOR_MINOR_SHLIB_EXT)
 libjulia-debug: $(build_shlibdir)/libjulia-debug.$(JL_MAJOR_MINOR_SHLIB_EXT)
 
 ifeq ($(OS),WINNT)
-# On Windows we need to strip out exported functions from the generated import library
-EXPORTED_FUNCS := $(shell echo -e "#include \"jl_exported_funcs.inc\"\n#define XX(x) x\nJL_EXPORTED_FUNCS(XX)" | $(CPP) -I$(JULIAHOME)/src - | tail -n 1)
+# On Windows we need to strip out exported functions from the generated import library.
+# On i686, there's an extra underscore at the beginning
+ifeq ($(ARCH),i686)
+ABI_UNDERSCORE := _
+else
+ABI_UNDERSCORE :=
+endif
+EXPORTED_FUNCS := $(shell echo -e "#include \"jl_exported_funcs.inc\"\n#define XX(x) $(ABI_UNDERSCORE)x\nJL_EXPORTED_FUNCS(XX)" | $(CPP) -I$(JULIAHOME)/src - | tail -n 1)
 STRIP_EXPORTED_FUNCS := $(patsubst %,--strip-symbol=%,$(EXPORTED_FUNCS))
 
 # Note that if the objcopy command starts getting too long, we can use `@file` to read
