@@ -41,7 +41,7 @@ int main(int argc, char * argv[])
         size_t max_arg_len = 4*wcslen(wargv[i]);
         argv[i] = (char *)malloc(max_arg_len);
         if (!wchar_to_utf8(wargv[i], argv[i], max_arg_len)) {
-            print_stderr("Unable to convert all arguments to UTF-8!\n");
+            jl_loader_print_stderr("Unable to convert all arguments to UTF-8!\n");
             return 1;
         }
     }
@@ -49,7 +49,7 @@ int main(int argc, char * argv[])
 #endif
 
     // Call load_repl with our initialization arguments:
-    int ret = load_repl(argc, argv);
+    int ret = jl_load_repl(argc, argv);
 
     // On Windows we're running without the CRT that would do this for us
     exit(ret);

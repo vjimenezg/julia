@@ -120,10 +120,10 @@ ifeq ($(OS), Darwin)
 CLANG_LDFLAGS += -Wl,-undefined,dynamic_lookup
 endif
 
-
-COMMON_LIBS := -L$(build_shlibdir) -L$(build_libdir) $(LIBUV) $(LIBUTF8PROC) $(NO_WHOLE_ARCHIVE) $(LIBUNWIND) $(LLVMLINK) $(OSLIBS)
-DEBUG_LIBS := $(WHOLE_ARCHIVE) $(BUILDDIR)/flisp/libflisp-debug.a $(WHOLE_ARCHIVE) $(BUILDDIR)/support/libsupport-debug.a -ljulia-debug $(COMMON_LIBS)
-RELEASE_LIBS := $(WHOLE_ARCHIVE) $(BUILDDIR)/flisp/libflisp.a $(WHOLE_ARCHIVE) $(BUILDDIR)/support/libsupport.a -ljulia $(COMMON_LIBS)
+COMMON_LIBPATHS := -L$(build_libdir) -L$(build_shlibdir)
+COMMON_LIBS := $(LIBUV) $(LIBUTF8PROC) $(NO_WHOLE_ARCHIVE) $(LIBUNWIND) $(LLVMLINK) $(OSLIBS)
+DEBUG_LIBS := $(COMMON_LIBPATHS) $(WHOLE_ARCHIVE) $(BUILDDIR)/flisp/libflisp-debug.a $(WHOLE_ARCHIVE) $(BUILDDIR)/support/libsupport-debug.a -ljulia-debug $(COMMON_LIBS)
+RELEASE_LIBS := $(COMMON_LIBPATHS) $(WHOLE_ARCHIVE) $(BUILDDIR)/flisp/libflisp.a $(WHOLE_ARCHIVE) $(BUILDDIR)/support/libsupport.a -ljulia $(COMMON_LIBS)
 
 OBJS := $(SRCS:%=$(BUILDDIR)/%.o)
 DOBJS := $(SRCS:%=$(BUILDDIR)/%.dbg.obj)
@@ -286,15 +286,12 @@ $(BUILDDIR)/julia_version.h: $(JULIAHOME)/VERSION
 
 ifneq ($(USEMSVC), 1)
 CXXLD = $(CXX) -shared
-ifeq ($(OS),WINNT)
-CXXLD += -Wl,--out-implib,$(build_libdir)/$(notdir $@).a
-endif
 else
 CXXLD = $(LD) -dll -export:jl_setjmp -export:jl_longjmp
 endif
 
 $(build_shlibdir)/libjulia-internal-debug.$(JL_MAJOR_MINOR_SHLIB_EXT): $(SRCDIR)/julia.expmap $(DOBJS) $(BUILDDIR)/flisp/libflisp-debug.a $(BUILDDIR)/support/libsupport-debug.a $(LIBUV)
-	@$(call PRINT_LINK, $(CXXLD) $(JCXXFLAGS) $(CXXLDFLAGS) $(DEBUGFLAGS) $(DOBJS) $(RPATH_LIB) -o $@ $(JLDFLAGS) $(JLIBLDFLAGS) $(DEBUG_LIBS) $(call SONAME_FLAGS,$(notdir $@)))
+	@$(call PRINT_LINK, $(CXXLD) $(call IMPLIB_FLAGS,$@) $(JCXXFLAGS) $(CXXLDFLAGS) $(DEBUGFLAGS) $(DOBJS) $(RPATH_LIB) -o $@ $(JLDFLAGS) $(JLIBLDFLAGS) $(DEBUG_LIBS) $(call SONAME_FLAGS,$(notdir $@)))
 	$(INSTALL_NAME_CMD)libjulia-internal-debug.$(SHLIB_EXT) $@
 ifneq ($(OS), WINNT)
 	@ln -sf libjulia-internal-debug.$(JL_MAJOR_MINOR_SHLIB_EXT) $(build_shlibdir)/libjulia-internal-debug.$(JL_MAJOR_SHLIB_EXT)
@@ -309,7 +306,7 @@ $(BUILDDIR)/libjulia-internal-debug.a: $(SRCDIR)/julia.expmap $(DOBJS) $(BUILDDI
 libjulia-internal-debug: $(build_shlibdir)/libjulia-internal-debug.$(JL_MAJOR_MINOR_SHLIB_EXT) $(PUBLIC_HEADER_TARGETS)
 
 $(build_shlibdir)/libjulia-internal.$(JL_MAJOR_MINOR_SHLIB_EXT): $(SRCDIR)/julia.expmap $(OBJS) $(BUILDDIR)/flisp/libflisp.a $(BUILDDIR)/support/libsupport.a $(LIBUV)
-	@$(call PRINT_LINK, $(CXXLD) $(JCXXFLAGS) $(CXXLDFLAGS) $(SHIPFLAGS) $(OBJS) $(RPATH_LIB) -o $@ $(JLDFLAGS) $(JLIBLDFLAGS) $(RELEASE_LIBS) $(call SONAME_FLAGS,$(notdir $@)))
+	@$(call PRINT_LINK, $(CXXLD) $(call IMPLIB_FLAGS,$@) $(JCXXFLAGS) $(CXXLDFLAGS) $(SHIPFLAGS) $(OBJS) $(RPATH_LIB) -o $@ $(JLDFLAGS) $(JLIBLDFLAGS) $(RELEASE_LIBS) $(call SONAME_FLAGS,$(notdir $@)))
 	$(INSTALL_NAME_CMD)libjulia-internal.$(SHLIB_EXT) $@
 ifneq ($(OS), WINNT)
 	@ln -sf libjulia-internal.$(JL_MAJOR_MINOR_SHLIB_EXT) $(build_shlibdir)/libjulia-internal.$(JL_MAJOR_SHLIB_EXT)

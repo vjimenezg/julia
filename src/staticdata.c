@@ -32,61 +32,171 @@ extern "C" {
 
 // An array of references that need to be restored from the sysimg
 // This is a manually constructed dual of the gvars array, which would be produced by codegen for Julia code, for C.
-static void *const _tags[] = {
-         // builtin types
-         &jl_any_type, &jl_symbol_type, &jl_ssavalue_type, &jl_datatype_type, &jl_slotnumber_type,
-         &jl_simplevector_type, &jl_array_type, &jl_typedslot_type,
-         &jl_expr_type, &jl_globalref_type, &jl_string_type,
-         &jl_module_type, &jl_tvar_type, &jl_method_instance_type, &jl_method_type, &jl_code_instance_type,
-         &jl_linenumbernode_type, &jl_lineinfonode_type,
-         &jl_gotonode_type, &jl_quotenode_type, &jl_gotoifnot_type, &jl_argument_type, &jl_returnnode_type,
-         &jl_const_type, &jl_partial_struct_type, &jl_method_match_type,
-         &jl_pinode_type, &jl_phinode_type, &jl_phicnode_type, &jl_upsilonnode_type,
-         &jl_type_type, &jl_bottom_type, &jl_ref_type, &jl_pointer_type, &jl_llvmpointer_type,
-         &jl_vararg_type, &jl_abstractarray_type,
-         &jl_densearray_type, &jl_nothing_type, &jl_function_type, &jl_typeofbottom_type,
-         &jl_unionall_type, &jl_typename_type, &jl_builtin_type, &jl_code_info_type,
-         &jl_task_type, &jl_uniontype_type, &jl_abstractstring_type,
-         &jl_array_any_type, &jl_intrinsic_type, &jl_abstractslot_type,
-         &jl_methtable_type, &jl_typemap_level_type, &jl_typemap_entry_type,
-         &jl_voidpointer_type, &jl_uint8pointer_type, &jl_newvarnode_type,
-         &jl_anytuple_type_type, &jl_anytuple_type, &jl_namedtuple_type, &jl_emptytuple_type,
-         &jl_array_symbol_type, &jl_array_uint8_type, &jl_array_int32_type,
-         &jl_int32_type, &jl_int64_type, &jl_bool_type, &jl_uint8_type,
-         &jl_uint32_type, &jl_uint64_type, &jl_char_type, &jl_weakref_type,
-         &jl_int8_type, &jl_int16_type, &jl_uint16_type,
-         &jl_float16_type, &jl_float32_type, &jl_float64_type, &jl_floatingpoint_type,
-         &jl_number_type, &jl_signed_type,
-         // special typenames
-         &jl_tuple_typename, &jl_pointer_typename, &jl_llvmpointer_typename, &jl_array_typename, &jl_type_typename,
-         &jl_vararg_typename, &jl_namedtuple_typename,
-         &jl_vecelement_typename,
-         // special exceptions
-         &jl_errorexception_type, &jl_argumenterror_type, &jl_typeerror_type,
-         &jl_methoderror_type, &jl_loaderror_type, &jl_initerror_type,
-         &jl_undefvarerror_type, &jl_stackovf_exception, &jl_diverror_exception,
-         &jl_interrupt_exception, &jl_boundserror_type, &jl_memory_exception,
-         &jl_undefref_exception, &jl_readonlymemory_exception,
-#ifdef SEGV_EXCEPTION
-         &jl_segv_exception,
-#endif
-         // other special values
-         &jl_emptysvec, &jl_emptytuple, &jl_false, &jl_true, &jl_nothing,
-         &jl_an_empty_string, &jl_an_empty_vec_any,
+jl_value_t **const*const get_tags(void) {
+    static void * _tags[147] = {NULL};
 
-         &jl_module_init_order, &jl_core_module, &jl_base_module, &jl_main_module, &jl_top_module,
-         &jl_typeinf_func, &jl_type_type_mt, &jl_nonfunction_mt,
-         // some Core.Builtin Functions that we want to be able to reference:
-         &jl_builtin_throw, &jl_builtin_is, &jl_builtin_typeof, &jl_builtin_sizeof,
-         &jl_builtin_issubtype, &jl_builtin_isa, &jl_builtin_typeassert, &jl_builtin__apply,
-         &jl_builtin__apply_iterate,
-         &jl_builtin_isdefined, &jl_builtin_nfields, &jl_builtin_tuple, &jl_builtin_svec,
-         &jl_builtin_getfield, &jl_builtin_setfield, &jl_builtin_fieldtype, &jl_builtin_arrayref,
-         &jl_builtin_const_arrayref, &jl_builtin_arrayset, &jl_builtin_arraysize,
-         &jl_builtin_apply_type, &jl_builtin_applicable, &jl_builtin_invoke,
-         &jl_builtin__expr, &jl_builtin_ifelse, &jl_builtin__typebody,
-         NULL };
-static jl_value_t **const*const tags = (jl_value_t**const*const)_tags;
+    // Lazyily-initialize this list
+    if (_tags[0] == NULL) {
+        // builtin types
+        _tags[  0] = &jl_any_type;
+        _tags[  1] = &jl_symbol_type;
+        _tags[  2] = &jl_ssavalue_type;
+        _tags[  3] = &jl_datatype_type;
+        _tags[  4] = &jl_slotnumber_type;
+        _tags[  5] = &jl_simplevector_type;
+        _tags[  6] = &jl_array_type;
+        _tags[  7] = &jl_typedslot_type;
+        _tags[  8] = &jl_expr_type;
+        _tags[  9] = &jl_globalref_type;
+        _tags[ 10] = &jl_string_type;
+        _tags[ 11] = &jl_module_type;
+        _tags[ 12] = &jl_tvar_type;
+        _tags[ 13] = &jl_method_instance_type;
+        _tags[ 14] = &jl_method_type;
+        _tags[ 15] = &jl_code_instance_type;
+        _tags[ 16] = &jl_linenumbernode_type;
+        _tags[ 17] = &jl_lineinfonode_type;
+        _tags[ 18] = &jl_gotonode_type;
+        _tags[ 19] = &jl_quotenode_type;
+        _tags[ 20] = &jl_gotoifnot_type;
+        _tags[ 21] = &jl_argument_type;
+        _tags[ 22] = &jl_returnnode_type;
+        _tags[ 23] = &jl_const_type;
+        _tags[ 24] = &jl_partial_struct_type;
+        _tags[ 25] = &jl_method_match_type;
+        _tags[ 26] = &jl_pinode_type;
+        _tags[ 27] = &jl_phinode_type;
+        _tags[ 28] = &jl_phicnode_type;
+        _tags[ 29] = &jl_upsilonnode_type;
+        _tags[ 30] = &jl_type_type;
+        _tags[ 31] = &jl_bottom_type;
+        _tags[ 32] = &jl_ref_type;
+        _tags[ 33] = &jl_pointer_type;
+        _tags[ 34] = &jl_llvmpointer_type;
+        _tags[ 35] = &jl_vararg_type;
+        _tags[ 36] = &jl_abstractarray_type;
+        _tags[ 37] = &jl_densearray_type;
+        _tags[ 38] = &jl_nothing_type;
+        _tags[ 39] = &jl_function_type;
+        _tags[ 41] = &jl_typeofbottom_type;
+        _tags[ 42] = &jl_unionall_type;
+        _tags[ 43] = &jl_typename_type;
+        _tags[ 44] = &jl_builtin_type;
+        _tags[ 45] = &jl_code_info_type;
+        _tags[ 46] = &jl_task_type;
+        _tags[ 47] = &jl_uniontype_type;
+        _tags[ 48] = &jl_abstractstring_type;
+        _tags[ 49] = &jl_array_any_type;
+        _tags[ 50] = &jl_intrinsic_type;
+        _tags[ 51] = &jl_abstractslot_type;
+        _tags[ 52] = &jl_methtable_type;
+        _tags[ 53] = &jl_typemap_level_type;
+        _tags[ 54] = &jl_typemap_entry_type;
+        _tags[ 55] = &jl_voidpointer_type;
+        _tags[ 56] = &jl_uint8pointer_type;
+        _tags[ 57] = &jl_newvarnode_type;
+        _tags[ 58] = &jl_anytuple_type_type;
+        _tags[ 59] = &jl_anytuple_type;
+        _tags[ 60] = &jl_namedtuple_type;
+        _tags[ 61] = &jl_emptytuple_type;
+        _tags[ 62] = &jl_array_symbol_type;
+        _tags[ 63] = &jl_array_uint8_type;
+        _tags[ 64] = &jl_array_int32_type;
+        _tags[ 65] = &jl_int32_type;
+        _tags[ 66] = &jl_int64_type;
+        _tags[ 67] = &jl_bool_type;
+        _tags[ 68] = &jl_uint8_type;
+        _tags[ 69] = &jl_uint32_type;
+        _tags[ 70] = &jl_uint64_type;
+        _tags[ 71] = &jl_char_type;
+        _tags[ 72] = &jl_weakref_type;
+        _tags[ 73] = &jl_int8_type;
+        _tags[ 74] = &jl_int16_type;
+        _tags[ 75] = &jl_uint16_type;
+        _tags[ 76] = &jl_float16_type;
+        _tags[ 77] = &jl_float32_type;
+        _tags[ 78] = &jl_float64_type;
+        _tags[ 79] = &jl_floatingpoint_type;
+        _tags[ 80] = &jl_number_type;
+        _tags[ 81] = &jl_signed_type;
+
+        // special typenames
+        _tags[ 82] = &jl_tuple_typename;
+        _tags[ 83] = &jl_pointer_typename;
+        _tags[ 84] = &jl_llvmpointer_typename;
+        _tags[ 85] = &jl_array_typename;
+        _tags[ 86] = &jl_type_typename;
+        _tags[ 87] = &jl_vararg_typename;
+        _tags[ 88] = &jl_namedtuple_typename;
+        _tags[ 89] = &jl_vecelement_typename;
+
+        // special exceptions
+        _tags[ 90] = &jl_errorexception_type;
+        _tags[ 91] = &jl_argumenterror_type;
+        _tags[ 92] = &jl_typeerror_type;
+        _tags[ 93] = &jl_methoderror_type;
+        _tags[ 94] = &jl_loaderror_type;
+        _tags[ 95] = &jl_initerror_type;
+        _tags[ 96] = &jl_undefvarerror_type;
+        _tags[ 97] = &jl_stackovf_exception;
+        _tags[ 98] = &jl_diverror_exception;
+        _tags[ 99] = &jl_interrupt_exception;
+        _tags[100] = &jl_boundserror_type;
+        _tags[101] = &jl_memory_exception;
+        _tags[102] = &jl_undefref_exception;
+        _tags[103] = &jl_readonlymemory_exception;
+
+#ifdef SEGV_EXCEPTION
+        _tags[104] = &jl_segv_exception;
+#endif
+        // other special values
+        _tags[105] = &jl_emptysvec;
+        _tags[106] = &jl_emptytuple;
+        _tags[107] = &jl_false;
+        _tags[108] = &jl_true;
+        _tags[109] = &jl_nothing;
+        _tags[110] = &jl_an_empty_string;
+        _tags[111] = &jl_an_empty_vec_any;
+        _tags[112] = &jl_module_init_order;
+        _tags[113] = &jl_core_module;
+        _tags[114] = &jl_base_module;
+        _tags[115] = &jl_main_module;
+        _tags[116] = &jl_top_module;
+        _tags[117] = &jl_typeinf_func;
+        _tags[118] = &jl_type_type_mt;
+        _tags[119] = &jl_nonfunction_mt;
+
+        // some Core.Builtin Functions that we want to be able to reference:
+        _tags[120] = &jl_builtin_throw;
+        _tags[121] = &jl_builtin_is;
+        _tags[122] = &jl_builtin_typeof;
+        _tags[123] = &jl_builtin_sizeof;
+        _tags[124] = &jl_builtin_issubtype;
+        _tags[125] = &jl_builtin_isa;
+        _tags[126] = &jl_builtin_typeassert;
+        _tags[127] = &jl_builtin__apply;
+        _tags[128] = &jl_builtin__apply_iterate;
+        _tags[129] = &jl_builtin_isdefined;
+        _tags[130] = &jl_builtin_nfields;
+        _tags[131] = &jl_builtin_tuple;
+        _tags[132] = &jl_builtin_svec;
+        _tags[133] = &jl_builtin_getfield;
+        _tags[134] = &jl_builtin_setfield;
+        _tags[135] = &jl_builtin_fieldtype;
+        _tags[136] = &jl_builtin_arrayref;
+        _tags[137] = &jl_builtin_const_arrayref;
+        _tags[138] = &jl_builtin_arrayset;
+        _tags[139] = &jl_builtin_arraysize;
+        _tags[140] = &jl_builtin_apply_type;
+        _tags[141] = &jl_builtin_applicable;
+        _tags[142] = &jl_builtin_invoke;
+        _tags[143] = &jl_builtin__expr;
+        _tags[144] = &jl_builtin_ifelse;
+        _tags[145] = &jl_builtin__typebody;
+        _tags[146] = NULL;
+    }
+    return (jl_value_t**const*const) _tags;
+}
 
 // hash of definitions for predefined tagged object
 static htable_t symbol_table;
@@ -1384,6 +1494,7 @@ static void jl_save_system_image_to_stream(ios_t *f) JL_GC_DISABLED
     s.ptls = jl_get_ptls_states();
     arraylist_new(&s.relocs_list, 0);
     arraylist_new(&s.gctags_list, 0);
+    jl_value_t **const*const tags = get_tags();
 
     // empty!(Core.ARGS)
     if (jl_core_module != NULL) {
@@ -1554,6 +1665,7 @@ static void jl_restore_system_image_from_stream(ios_t *f) JL_GC_DISABLED
     s.ptls = jl_get_ptls_states();
     arraylist_new(&s.relocs_list, 0);
     arraylist_new(&s.gctags_list, 0);
+    jl_value_t **const*const tags = get_tags();
 
     // step 1: read section map
     assert(ios_pos(f) == 0 && f->bm == bm_mem);

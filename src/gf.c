@@ -69,12 +69,18 @@ void jl_call_tracer(tracer_cb callback, jl_value_t *tracee)
 
 /// ----- Definitions for various internal TypeMaps ----- ///
 
-static const struct jl_typemap_info method_defs = {
-    1, &jl_method_type
-};
-static const struct jl_typemap_info lambda_cache = {
-    0, &jl_method_instance_type
-};
+static struct jl_typemap_info method_defs = {0};
+static struct jl_typemap_info lambda_cache = {0};
+
+// The Windows linker is unable to grab the imported `jl_method_type` and `jl_method_instance_type`
+// values at link-time, so we use a constructor method to do the importing ourselves.
+__attribute__((constructor))
+static void jl_initialize_typemaps() {
+    method_defs.unsorted = 1;
+    method_defs.jl_contains = &jl_method_type;
+    lambda_cache.unsorted = 0;
+    lambda_cache.jl_contains = &jl_method_instance_type;
+}
 
 static int8_t jl_cachearg_offset(jl_methtable_t *mt)
 {

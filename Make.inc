@@ -448,6 +448,7 @@ USEGCC := 0
 USECLANG := 0
 USEICC := 0
 else
+USEMSVC := 0
 ifeq ($(USECLANG), 1)
 USEGCC := 0
 USEICC := 0
@@ -614,10 +615,19 @@ endif
 
 ifeq ($(SHLIB_EXT), so)
 define SONAME_FLAGS
--Wl,-soname=$1
+  -Wl,-soname=$1
 endef
 else
 define SONAME_FLAGS
+endef
+endif
+
+ifeq ($(OS)$(USEMSVC),WINNT0)
+define IMPLIB_FLAGS
+  -Wl,--out-implib,$(build_libdir)/$(notdir $1).a
+endef
+else
+define IMPLIB_FLAGS
 endef
 endif
 

@@ -40,6 +40,7 @@
     XX(jl_globalref_type) \
     XX(jl_gotoifnot_type) \
     XX(jl_gotonode_type) \
+    XX(jl_incomplete_sym) \
     XX(jl_initerror_type) \
     XX(jl_int16_type) \
     XX(jl_int32_type) \

@@ -9,7 +9,7 @@ include $(JULIAHOME)/deps/llvm-ver.make
 HEADERS := $(addprefix $(JULIAHOME)/src/support/,platform.h dirpath.h)
 
 LOADER_CFLAGS = $(JCFLAGS) -I$(BUILDROOT)/src -I$(JULIAHOME)/src -I$(JULIAHOME)/src/support -I$(build_includedir) -ffreestanding
-LOADER_LDFLAGS = $(JLDFLAGS) -ffreestanding -L$(build_shlibdir)
+LOADER_LDFLAGS = $(JLDFLAGS) -ffreestanding -L$(build_shlibdir) -L$(build_libdir)
 
 ifeq ($(OS),WINNT)
 LOADER_CFLAGS += -municode -mconsole -nostdlib -fno-stack-check -fno-stack-protector -mno-stack-arg-probe
@@ -39,12 +39,20 @@ default: release
 all: release debug
 release debug :  % : julia-% libjulia-%
 
-$(BUILDDIR)/%.o : $(SRCDIR)/%.c $(HEADERS)
+$(BUILDDIR)/loader_lib.o : $(SRCDIR)/loader_lib.c $(HEADERS)
+	@$(call PRINT_CC, $(CC) -DLIBRARY_EXPORTS $(SHIPFLAGS) $(LOADER_CFLAGS) -c $< -o $@)
+$(BUILDDIR)/loader_lib.dbg.obj : $(SRCDIR)/loader_lib.c $(HEADERS)
+	@$(call PRINT_CC, $(CC) -DLIBRARY_EXPORTS $(DEBUGFLAGS) $(LOADER_CFLAGS) -c $< -o $@)
+$(BUILDDIR)/loader_exe.o : $(SRCDIR)/loader_exe.c $(HEADERS)
 	@$(call PRINT_CC, $(CC) $(SHIPFLAGS) $(LOADER_CFLAGS) -c $< -o $@)
-$(BUILDDIR)/%.dbg.obj : $(SRCDIR)/%.c $(HEADERS)
+$(BUILDDIR)/loader_exe.dbg.obj : $(SRCDIR)/loader_exe.c $(HEADERS)
 	@$(call PRINT_CC, $(CC) $(DEBUGFLAGS) $(LOADER_CFLAGS) -c $< -o $@)
 
-$(build_bindir) $(build_shlibdir):
+DIRS = $(build_bindir)
+ifneq ($(build_shlibdir),$(build_bindir))
+DIRS += $(build_shlibdir)
+endif
+$(DIRS):
 	@mkdir -p $@
 
 ifeq ($(OS),WINNT)
@@ -58,10 +66,6 @@ $(BUILDDIR)/julia_res.o: $(JULIAHOME)/contrib/windows/julia.rc $(JULIAHOME)/VERS
 EXE_OBJS += $(BUILDDIR)/julia_res.o
 EXE_DOBJS += $(BUILDDIR)/julia_res.o
 endif
-endif
-
-ifneq ($(OS),WINNT)
-HIDDEN_SYMBOL := __attribute__((visibility(\"hidden\")))
 endif
 
 # Embed an Info.plist in the julia executable
@@ -85,19 +89,35 @@ julia-debug: $(build_bindir)/julia-debug$(EXE)
 libjulia-release: $(build_shlibdir)/libjulia.$(JL_MAJOR_MINOR_SHLIB_EXT)
 libjulia-debug: $(build_shlibdir)/libjulia-debug.$(JL_MAJOR_MINOR_SHLIB_EXT)
 
+ifeq ($(OS),WINNT)
+# On Windows we need to strip out exported functions from the generated import library
+EXPORTED_FUNCS := $(shell echo -e "#include \"jl_exported_funcs.inc\"\n#define XX(x) x\nJL_EXPORTED_FUNCS(XX)" | $(CPP) -I$(JULIAHOME)/src - | tail -n 1)
+STRIP_EXPORTED_FUNCS := $(patsubst %,--strip-symbol=%,$(EXPORTED_FUNCS))
+
+# Note that if the objcopy command starts getting too long, we can use `@file` to read
+# command-line options from `file` instead.
+define strip_implib
+	$(OBJCOPY) $(1).a $(STRIP_EXPORTED_FUNCS) $(1).a.stripped
+	mv $(1).a.stripped $(1).a
+endef
+endif
+
 $(build_shlibdir)/libjulia.$(JL_MAJOR_MINOR_SHLIB_EXT): $(LIB_OBJS) | $(build_shlibdir)
-	@$(call PRINT_LINK, $(CC) $(LOADER_CFLAGS) -DLIBRARY_EXPORTS -shared $(SHIPFLAGS) $(LIB_OBJS) -o $@ $(LOADER_LDFLAGS) $(RPATH_LIB)) $(call SONAME_FLAGS,$(notdir $@))
+	@$(call PRINT_LINK, $(CC) $(call IMPLIB_FLAGS,$@) $(LOADER_CFLAGS) -DLIBRARY_EXPORTS -shared $(SHIPFLAGS) $(LIB_OBJS) -o $@ $(LOADER_LDFLAGS) $(RPATH_LIB)) $(call SONAME_FLAGS,$(notdir $@))
 ifneq ($(OS), WINNT)
 	@ln -sf $(notdir $@) $(build_shlibdir)/libjulia.$(JL_MAJOR_SHLIB_EXT)
 	@ln -sf $(notdir $@) $(build_shlibdir)/libjulia.$(SHLIB_EXT)
+else
+	$(call strip_implib,$(build_libdir)/libjulia.$(SHLIB_EXT))
 endif
 
-
 $(build_shlibdir)/libjulia-debug.$(JL_MAJOR_MINOR_SHLIB_EXT): $(LIB_DOBJS) | $(build_shlibdir)
-	@$(call PRINT_LINK, $(CC) $(LOADER_CFLAGS) -DLIBRARY_EXPORTS -shared $(DEBUGFLAGS) $(LIB_DOBJS) -o $@ $(LOADER_LDFLAGS) $(RPATH_LIB)) $(call SONAME_FLAGS,$(notdir $@))
+	@$(call PRINT_LINK, $(CC) $(call IMPLIB_FLAGS,$@) $(LOADER_CFLAGS) -DLIBRARY_EXPORTS -shared $(DEBUGFLAGS) $(LIB_DOBJS) -o $@ $(LOADER_LDFLAGS) $(RPATH_LIB)) $(call SONAME_FLAGS,$(notdir $@))
 ifneq ($(OS), WINNT)
 	@ln -sf $(notdir $@) $(build_shlibdir)/libjulia-debug.$(JL_MAJOR_SHLIB_EXT)
 	@ln -sf $(notdir $@) $(build_shlibdir)/libjulia-debug.$(SHLIB_EXT)
+else
+	$(call strip_implib,$(build_libdir)/libjulia-debug.$(SHLIB_EXT))
 endif
 
 $(build_bindir)/julia$(EXE): $(EXE_OBJS) $(build_shlibdir)/libjulia.$(JL_MAJOR_MINOR_SHLIB_EXT) | $(build_bindir)

@@ -18,16 +18,16 @@ extern "C" {
 // Save DEP_LIBS to a variable that is explicitly sized for expansion
 static char dep_libs[512] = DEP_LIBS;
 
-void print_stderr(const char * msg)
+JL_DLLEXPORT void jl_loader_print_stderr(const char * msg)
 {
     fputs(msg, stderr);
 }
 // I use three arguments a lot.
-void print_stderr3(const char * msg1, const char * msg2, const char * msg3)
+void jl_loader_print_stderr3(const char * msg1, const char * msg2, const char * msg3)
 {
-    print_stderr(msg1);
-    print_stderr(msg2);
-    print_stderr(msg3);
+    jl_loader_print_stderr(msg1);
+    jl_loader_print_stderr(msg2);
+    jl_loader_print_stderr(msg3);
 }
 
 /* Wrapper around dlopen(), with extra relative pathing thrown in*/
@@ -41,7 +41,7 @@ static void * load_library(const char * rel_path, const char * src_dir) {
 #if defined(_OS_WINDOWS_)
     wchar_t wpath[2*PATH_MAX + 1] = {0};
     if (!utf8_to_wchar(path, wpath, 2*PATH_MAX)) {
-        print_stderr3("ERROR: Unable to convert path ", path, " to wide string!\n");
+        jl_loader_print_stderr3("ERROR: Unable to convert path ", path, " to wide string!\n");
         exit(1);
     }
     handle = (void *)LoadLibraryExW(wpath, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
@@ -50,7 +50,7 @@ static void * load_library(const char * rel_path, const char * src_dir) {
 #endif
 
     if (handle == NULL) {
-        print_stderr3("ERROR: Unable to load dependent library ", path, "\n");
+        jl_loader_print_stderr3("ERROR: Unable to load dependent library ", path, "\n");
 #if defined(_OS_WINDOWS_)
         LPWSTR wmsg = TEXT("");
         FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER |
@@ -62,9 +62,9 @@ static void * load_library(const char * rel_path, const char * src_dir) {
                        (LPWSTR)&wmsg, 0, NULL);
         char err[256] = {0};
         wchar_to_utf8(wmsg, err, 255);
-        print_stderr3("Message:", err, "\n");
+        jl_loader_print_stderr3("Message:", err, "\n");
 #else
-        print_stderr3("Message:", dlerror(), "\n");
+        jl_loader_print_stderr3("Message:", dlerror(), "\n");
 #endif
         exit(1);
     }
@@ -89,28 +89,28 @@ const char * get_libdir()
 
     // Get a handle to libjulia internal
     if (!utf8_to_wchar(LIBJULIA_NAME, libjulia_path, PATH_MAX)) {
-        print_stderr3("ERROR: Unable to convert path ", LIBJULIA_NAME, " to wide string!\n");
+        jl_loader_print_stderr3("ERROR: Unable to convert path ", LIBJULIA_NAME, " to wide string!\n");
         exit(1);
     }
     libjulia_internal = LoadLibraryW(libjulia_path);
     if (libjulia_internal == NULL) {
-        print_stderr3("ERROR: Unable to load ", LIBJULIA_NAME, "!\n");
+        jl_loader_print_stderr3("ERROR: Unable to load ", LIBJULIA_NAME, "!\n");
         exit(1);
     }
     if (!GetModuleFileName(libjulia_internal, libjulia_path, PATH_MAX)) {
-        print_stderr("ERROR: GetModuleFileName() failed\n");
+        jl_loader_print_stderr("ERROR: GetModuleFileName() failed\n");
         exit(1);
     }
     if (!wchar_to_utf8(libjulia_path, lib_dir, PATH_MAX)) {
-        print_stderr("ERROR: Unable to convert julia path to UTF-8\n");
+        jl_loader_print_stderr("ERROR: Unable to convert julia path to UTF-8\n");
         exit(1);
     }
 #else
     // On all other platforms, use dladdr()
     Dl_info info;
     if (!dladdr(&get_libdir, &info)) {
-        print_stderr("ERROR: Unable to dladdr(&get_libdir)!\n");
-        print_stderr3("Message:", dlerror(), "\n");
+        jl_loader_print_stderr("ERROR: Unable to dladdr(&get_libdir)!\n");
+        jl_loader_print_stderr3("Message:", dlerror(), "\n");
         exit(1);
     }
     strcpy(lib_dir, info.dli_fname);
@@ -158,18 +158,18 @@ void * load_libjulia_internal() {
 }
 
 // Load libjulia and run the REPL with the given arguments (in UTF-8 format)
-JL_DLLEXPORT int load_repl(int argc, char * argv[]) {
+JL_DLLEXPORT int jl_load_repl(int argc, char * argv[]) {
     void * libjulia_internal = load_libjulia_internal();
     // Next, if we're on Linux/FreeBSD, set up fast TLS.
 #if !defined(_OS_WINDOWS_) && !defined(_OS_DARWIN_)
     void (*jl_set_ptls_states_getter)(void *) = lookup_symbol(libjulia_internal, "jl_set_ptls_states_getter");
     if (jl_set_ptls_states_getter == NULL) {
-        print_stderr("ERROR: Cannot find jl_set_ptls_states_getter() function within libjulia-internal!\n");
+        jl_loader_print_stderr("ERROR: Cannot find jl_set_ptls_states_getter() function within libjulia-internal!\n");
         exit(1);
     }
     void * (*fptr)(void) = lookup_symbol(NULL, "jl_get_ptls_states_static");
     if (fptr == NULL) {
-        print_stderr("ERROR: Cannot find jl_get_ptls_states_static(), must define this symbol within calling executable!\n");
+        jl_loader_print_stderr("ERROR: Cannot find jl_get_ptls_states_static(), must define this symbol within calling executable!\n");
         exit(1);
     }
     jl_set_ptls_states_getter((void *)fptr);
@@ -178,7 +178,7 @@ JL_DLLEXPORT int load_repl(int argc, char * argv[]) {
     // Load the repl entrypoint symbol and jump into it!
     int (*entrypoint)(int, char **) = (int (*)(int, char **))lookup_symbol(libjulia_internal, "repl_entrypoint");
     if (entrypoint == NULL) {
-        print_stderr("ERROR: Unable to find `repl_entrypoint()` within libjulia-internal!\n");
+        jl_loader_print_stderr("ERROR: Unable to find `repl_entrypoint()` within libjulia-internal!\n");
         exit(1);
     }
     return entrypoint(argc, (char **)argv);

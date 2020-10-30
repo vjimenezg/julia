@@ -94,9 +94,9 @@
 
 
 // Declarations from `loader_lib.c` and `loader_win_utils.c`
-JL_DLLEXPORT extern int load_repl(int, char **);
-void print_stderr(const char * msg);
-void print_stderr3(const char * msg1, const char * msg2, const char * msg3);
+JL_DLLEXPORT extern int jl_load_repl(int, char **);
+JL_DLLEXPORT void jl_loader_print_stderr(const char * msg);
+void jl_loader_print_stderr3(const char * msg1, const char * msg2, const char * msg3);
 static void * lookup_symbol(const void * lib_handle, const char * symbol_name);
 
 #ifdef _OS_WINDOWS_
