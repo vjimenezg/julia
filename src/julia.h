@@ -712,9 +712,6 @@ extern JL_DLLIMPORT jl_value_t *jl_true JL_GLOBALLY_ROOTED;
 extern JL_DLLIMPORT jl_value_t *jl_false JL_GLOBALLY_ROOTED;
 extern JL_DLLIMPORT jl_value_t *jl_nothing JL_GLOBALLY_ROOTED;
 
-// some important symbols
-extern JL_DLLIMPORT jl_sym_t *jl_incomplete_sym;
-
 // gc -------------------------------------------------------------------------
 
 typedef struct _jl_gcframe_t {
