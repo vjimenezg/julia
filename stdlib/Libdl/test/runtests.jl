@@ -19,7 +19,7 @@ end
       if Base.DARWIN_FRAMEWORK
           return occursin(Regex("^$(Base.DARWIN_FRAMEWORK_NAME)(?:_debug)?\$"), basename(dl))
       else
-          return occursin(Regex("^libjulia(?:.*)\\.$(Libdl.dlext)(?:\\..+)?\$"), basename(dl))
+          return occursin(Regex("^libjulia-internal(?:.*)\\.$(Libdl.dlext)(?:\\..+)?\$"), basename(dl))
       end
     end) == 1 # look for something libjulia-like (but only one)
 
