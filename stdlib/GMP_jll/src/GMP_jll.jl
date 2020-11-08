@@ -1,7 +1,6 @@
 # This file is a part of Julia. License is MIT: https://julialang.org/license
 
 ## dummy stub for https://github.com/JuliaBinaryWrappers/GMP_jll.jl
-
 module GMP_jll
 
 using Libdl
