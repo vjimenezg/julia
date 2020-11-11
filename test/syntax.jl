@@ -2613,3 +2613,11 @@ end
 end
 
 @test eval(Expr(:if, Expr(:block, Expr(:&&, true, Expr(:call, :(===), 1, 1))), 1, 2)) == 1
+
+# issue #38386
+macro m38386()
+    fname = :f38386
+    :(function $(esc(fname)) end)
+end
+@m38386
+@test isempty(methods(f38386))
