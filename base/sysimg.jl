@@ -19,47 +19,54 @@ Base.init_load_path()
 if Base.is_primary_base_module
 # load some stdlib packages but don't put their names in Main
 let
-    # Stdlibs manually sorted in top down order
+    # Stdlibs sorted in dependency, then alphabetical, order by contrib/print_sorted_stdlibs.jl
     stdlibs = [
-            # No deps
-            :Base64,
-            :CRC32c,
-            :SHA,
-            :FileWatching,
-            :Unicode,
-            :Mmap,
-            :Serialization,
-            :Libdl,
-            :Printf,
-            :Markdown,
-            :NetworkOptions,
-            :LibGit2,
-            :Logging,
-            :Sockets,
-            :Profile,
-            :Dates,
-            :DelimitedFiles,
-            :Random,
-            :UUIDs,
-            :Future,
-            :LinearAlgebra,
-            :SparseArrays,
-            :SuiteSparse,
-            :Distributed,
-            :SharedArrays,
-            :TOML,
-            :Artifacts,
-            :Pkg,
-            :Test,
-            :REPL,
-            :Statistics,
-            :MozillaCACerts_jll,
-            :LibCURL_jll,
-            :LibCURL,
-            :Downloads,
-            :ArgTools,
-            :Tar,
-        ]
+        # No dependencies
+        :ArgTools,
+        :Artifacts,
+        :Base64,
+        :CRC32c,
+        :FileWatching,
+        :Libdl,
+        :Logging,
+        :Mmap,
+        :MozillaCACerts_jll,
+        :NetworkOptions,
+        :SHA,
+        :Serialization,
+        :Sockets,
+        :Unicode,
+
+        # 1-depth packages
+        :DelimitedFiles,
+        :Distributed,
+        :LibCURL_jll,
+        :LinearAlgebra,
+        :Markdown,
+        :Printf,
+        :Random,
+        :Tar,
+
+        # 2-depth packages
+        :Dates,
+        :Future,
+        :InteractiveUtils,
+        :LibCURL,
+        :LibGit2,
+        :Profile,
+        :REPL,
+        :SharedArrays,
+        :SparseArrays,
+        :SuiteSparse,
+        :UUIDs,
+
+        # 3-depth packages
+        :Downloads,
+        :Pkg,
+        :Statistics,
+        :TOML,
+        :Test,
+    ]
 
     maxlen = reduce(max, textwidth.(string.(stdlibs)); init=0)
 
