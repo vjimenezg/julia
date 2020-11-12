@@ -195,8 +195,7 @@ function wait_for_conn(w)
         @async begin
             sleep(timeout)
             lock(w.c_state) do
-                # TODO: This can wakeup other listeners, who might be fine waiting longer
-                #       or who are waiting for a different state change.
+                # Note: This could wakeup other listeners on `c_state`
                 notify(w.c_state; all=true)
             end
         end
@@ -643,10 +642,7 @@ function create_worker(manager, wconfig)
                     lock(jw.c_state) do
                        wait(jw.c_state)
                     end
-                    # Failed to connect
-                    if jw.state === W_CREATED
-                        continue
-                    end
+                    # Note: jw.state could still be in W_CREATED if we got woke to early,
                 end
                 push!(join_list, jw)
             end
@@ -675,10 +671,7 @@ function create_worker(manager, wconfig)
                 lock(wl.c_state) do
                    wait(wl.c_state)
                 end
-                # Failed to connect
-                if wl.state === W_CREATED
-                    continue
-                end
+                # Note: wl.state could still be in W_CREATED if we got woke to early,
             end
             push!(join_list, wl)
         end
