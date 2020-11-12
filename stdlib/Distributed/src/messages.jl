@@ -127,6 +127,7 @@ function flush_gc_msgs(w::Worker)
         return
     end
     lock(w.msg_lock) do
+        w.gcflag || return # early exit if someone else got to this
         w.gcflag = false
         msgs = w.add_msgs
         w.add_msgs = Any[]
